@@ -1,6 +1,6 @@
 ---
 name: simplified-technical-english
-description: Writes and rewrites text in Simplified Technical English (ASD-STE100), a controlled language for clear technical documentation. Use when the user asks for STE, Simplified Technical English, controlled language, or plain technical writing, and when the user asks to write, rewrite, review, or check technical documentation, procedures, manuals, instructions, warnings, or reports.
+description: Writes and rewrites text in Simplified Technical English (ASD-STE100), a controlled language for clear technical documentation. Use only when the user explicitly asks for STE, Simplified Technical English, ASD-STE100, or controlled language, or asks to check text against the STE rules. Do not use for ordinary documentation, READMEs, code comments, commit messages, or pull request descriptions unless the user asks for STE.
 license: MIT for the text of this skill. The word list in references/word-list.md comes from the ASD-STE100 dictionary, which is the property of ASD. Refer to NOTICE.md.
 metadata:
   source-specification: ASD-STE100 Issue 7 (2017-01-25)
@@ -87,7 +87,9 @@ The two types have different limits. Do not mix the two types in one paragraph.
 
 After you write, check your text. Do these steps:
 
-1. If you can run scripts, run: `python3 scripts/ste_check.py --mode <procedural|descriptive> <file>`.
+1. If you can run scripts, run: `python3 scripts/ste_check.py --mode <procedural|descriptive> <file>`. The path `scripts/ste_check.py` is relative to the directory of this skill.
+   To permit the technical names of your project, write them in a file, with one name on each line.
+   Then add `--allow <file>`. If you name the file `.ste-allow`, the tool finds it in the directory where you run the tool.
 2. If you cannot run scripts, do a manual scan of the checklist below.
 3. Correct each error.
 4. Check the text again. Stop only when the text has no errors.

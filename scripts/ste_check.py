@@ -5,7 +5,7 @@ This tool finds violations of the STE writing rules in text or Markdown.
 It uses only the Python standard library.
 
 Usage:
-    python3 ste_check.py [--mode procedural|descriptive|mixed] FILE...
+    python3 ste_check.py [--mode procedural|descriptive|mixed] [--allow NAMES] FILE...
     cat draft.txt | python3 ste_check.py --mode procedural
 
 The tool ignores code blocks, inline code, URLs, and YAML frontmatter.
@@ -31,14 +31,47 @@ ING_NOT_SUFFIX = {
     "ring", "spring", "string", "king", "thing", "wing", "sing",
     "bring", "sting", "swing", "nothing", "anything", "everything",
     "something", "bearing", "ceiling", "morning", "evening",
+    # frequent nouns and technical names that are not verb forms
+    "warning", "meaning", "spelling", "heading", "building", "housing",
+    "fitting", "wiring", "coupling", "drawing", "bushing", "tubing",
+    "lining", "casing", "padding", "spacing",
 }
+
+# Words that the vocabulary check accepts without the word list:
+# the article "a", signal words of safety instructions (rule 7.1),
+# and numbers (technical name category 9).
+VOCAB_EXTRA = {
+    "a", "warning", "caution", "note",
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "nine", "ten", "eleven", "twelve", "twenty", "thirty", "forty", "fifty",
+    "hundred", "thousand", "first", "second", "third",
+}
+
+# Abbreviations that end with a full stop but do not end a sentence.
+# The second group does not end a sentence only before a number.
+ABBREV = re.compile(
+    r"\b(?:e\.g|i\.e|cf|vs|approx)\.|"
+    r"\b(?:Fig|Figs|No|Nos|Ref|Para|Vol|Rev|Sect|Chap|Tab)\.(?=\s+\d)",
+    re.IGNORECASE,
+)
+
+# Rule 8.6: a number, or a number with its unit, counts as one word.
+UNITS = (
+    r"°\s?[CF]|%|N\.m|Nm|lbf\.in|lbf\.ft|lbf|psi|bar|kPa|MPa|Pa|"
+    r"mm|cm|km|m|ft|mi|kg|mg|g|lb|oz|mL|ml|L|l|"
+    r"kV|mV|V|mA|A|kW|mW|W|ohms?|Ω|kHz|MHz|GHz|Hz|"
+    r"ms|s|min|h|rpm|K|dB|KB|MB|GB|TB|kB|B"
+)
+NUMBER_UNIT = re.compile(
+    r"(?<![\w.])[-+]?\d+(?:[.,]\d+)*(?:\s?(?:" + UNITS + r"))?(?!\w)(?!\.\w)"
+)
 
 # Rule 3.2 and the dictionary: approved helping verbs are CAN, MUST, WILL.
 BANNED_MODALS = {"should", "would", "may", "might", "shall", "ought"}
 
 CONTRACTION = re.compile(
-    r"\b\w+n't\b|\b\w+'(?:re|ll|ve|m)\b|"
-    r"\b(?:it|that|there|what|let|who|here|he|she)'s\b",
+    r"\b\w+n['’]t\b|\b\w+['’](?:re|ll|ve|m|d)\b|"
+    r"\b(?:it|that|there|what|let|who|here|he|she)['’]s\b",
     re.IGNORECASE,
 )
 
@@ -66,7 +99,17 @@ BE_ING = re.compile(
     r"\b(?:is|are|was|were|be|been|am)\s+\w+ing\b", re.IGNORECASE
 )
 
+# A past participle after "was" or "were" is almost always a passive
+# (rule 3.6). After "is" or "are" it can show a condition (rule 3.3).
+PAST_PASSIVE = re.compile(
+    r"\b(?:was|were)\s+(?:not\s+)?(?:\w+ed|done|made|put|set|cut|kept|held|"
+    r"taken|given|found|left|lost|sent|shown|told|built|broken|brought|"
+    r"known|read|run|seen|thrown|worn|written)\b",
+    re.IGNORECASE,
+)
+
 SENT_SPLIT = re.compile(r"(?<=[.!?:])\s+")
+ABBREV_MARK = "\x00"
 WORDISH = re.compile(r"[A-Za-z0-9'&/’-]+")
 
 LIMITS = {"procedural": 20, "descriptive": 25, "mixed": 25}
@@ -78,6 +121,7 @@ def strip_markdown(text):
     """Remove parts of the text that the STE rules do not control."""
     text = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.DOTALL)   # frontmatter
     text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)          # code blocks
+    text = drop_indented_code(text)                                  # code blocks
     text = re.sub(r"`[^`\n]+`", " CODE ", text)                      # inline code
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)             # links
     text = re.sub(r"https?://\S+", " URL ", text)                    # bare URLs
@@ -87,22 +131,43 @@ def strip_markdown(text):
     return text
 
 
+def drop_indented_code(text):
+    """Remove indented code blocks (4 spaces or a tab on each line).
+
+    A block that starts with a list marker is a nested list, not code.
+    """
+    parts = re.split(r"(\n[ \t]*\n)", text)
+    for i, part in enumerate(parts):
+        lines = [l for l in part.splitlines() if l.strip()]
+        if (lines
+                and all(re.match(r"(?: {4,}|\t)", l) for l in lines)
+                and not re.match(r"\s*(?:[-*+]|\d+\.)\s", lines[0])):
+            parts[i] = " "
+    return "".join(parts)
+
+
 def count_words(sentence):
     """Count words with the STE conventions of section 8.
 
-    A number, an identifier, a hyphenated group, and text in
-    parentheses each count as one word.
+    A number, a number with its unit, an abbreviation, an identifier,
+    a hyphenated group, and text in parentheses each count as one word.
     """
     s = re.sub(r"\([^)]*\)", " PAREN ", sentence)   # rule 8.5
+    s = ABBREV.sub(" ABBR ", s)                     # rule 8.6
+    s = NUMBER_UNIT.sub(" NUM ", s)                 # rule 8.6
     s = re.sub(r"\*\*|\*|__|_|#+", " ", s)          # markdown marks
     tokens = WORDISH.findall(s)                     # hyphenated group = 1 (rule 8.7)
     return len(tokens)
 
 
 def iter_sentences(block):
-    """Divide a text block into sentences."""
+    """Divide a text block into sentences.
+
+    A full stop in an abbreviation ("e.g.", "Fig. 2") does not end a sentence.
+    """
+    block = ABBREV.sub(lambda m: m.group(0).replace(".", ABBREV_MARK), block)
     for part in SENT_SPLIT.split(block):
-        part = part.strip()
+        part = part.replace(ABBREV_MARK, ".").strip()
         if part and WORDISH.search(part):
             yield part
 
@@ -131,6 +196,16 @@ def load_word_list(path):
             if word.endswith("y") and word[-2:-1] not in "aeiou":
                 approved.add(word[:-1] + "ies")
     return approved
+
+
+def load_allow_list(path):
+    """Read a file of technical names. Lines that start with "#" are comments."""
+    allowed = set()
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", line):
+            allowed.add(w.lower())
+    return allowed
 
 
 # ---------------------------------------------------------------- checks
@@ -178,6 +253,10 @@ def check_sentence(sent, mode, report, loc):
     m = PASSIVE_BY.search(sent)
     if m:
         report.error(loc, "3.6", f"passive voice \"{m.group(0)}\": make the agent the subject.")
+    else:
+        m = PAST_PASSIVE.search(sent)
+        if m:
+            report.warn(loc, "3.6", f"possible passive voice \"{m.group(0)}\": make the agent the subject.")
 
     m = BE_ING.search(sent)
     if m:
@@ -208,7 +287,7 @@ def check_vocab(text, report, approved):
         if word.isupper() or any(c.isupper() for c in word[1:]):
             continue  # acronym, identifier, or quoted text
         lw = word.lower()
-        if lw in approved or lw in ING_APPROVED or len(lw) <= 1:
+        if lw in approved or lw in ING_APPROVED or lw in VOCAB_EXTRA or len(lw) <= 1:
             continue
         if all(p in approved for p in lw.split("-") if p):
             continue
@@ -229,13 +308,12 @@ def check_text(text, mode, report, name, approved):
     text = strip_markdown(text)
     paragraphs = re.split(r"\n\s*\n", text)
     for i, par in enumerate(paragraphs):
-        par = par.strip()
-        if not par or not WORDISH.search(par):
+        # a heading or a table row is a title or quoted text (rule 8.6).
+        # Skip only that line. The text below a heading is still checked.
+        lines = [l for l in par.splitlines()
+                 if l.strip() and not l.lstrip().startswith(("#", "|"))]
+        if not lines or not WORDISH.search(" ".join(lines)):
             continue
-        # a heading or a table row is a title or quoted text (rule 8.6)
-        if par.startswith("#") or par.startswith("|"):
-            continue
-        lines = par.splitlines()
         bullet = re.compile(r"\s*(?:[-*+]|\d+\.)\s")
         items = [l for l in lines if bullet.match(l)]
         prose = [l for l in lines if not bullet.match(l)]
@@ -261,6 +339,9 @@ def main():
                     help="path to word-list.md (default: ../references/word-list.md)")
     ap.add_argument("--no-vocab", action="store_true",
                     help="do not check words against the approved word list")
+    ap.add_argument("--allow", action="append", default=[], metavar="FILE",
+                    help="file of permitted technical names, one on each line "
+                         "(default: .ste-allow in the working directory, if it exists)")
     args = ap.parse_args()
 
     approved = None
@@ -271,6 +352,9 @@ def main():
             wl = default if default.exists() else None
         if wl:
             approved = load_word_list(wl)
+            allow_files = args.allow or [f for f in [".ste-allow"] if Path(f).exists()]
+            for f in allow_files:
+                approved |= load_allow_list(f)
 
     report = Report()
     if args.files:

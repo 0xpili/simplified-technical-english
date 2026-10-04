@@ -66,6 +66,18 @@ The tool finds these errors:
 
 The tool uses only Python 3. The tool shows each error and its rule number.
 
+Your project has technical names that are not in the word list.
+Write these names in a file, with one name on each line.
+Then give the file to the tool:
+
+    python3 scripts/ste_check.py --allow names.txt chapter.md
+
+If you name the file `.ste-allow`, the tool finds it in the directory where you run the tool.
+
+To do the tests of the check tool, run:
+
+    python3 -m unittest discover tests
+
 ## Limits of the skill
 
 The tool cannot find all the errors.

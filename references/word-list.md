@@ -958,7 +958,7 @@ VOLUME (n)
 ## W
 
 WAIT (v)
-WALK (v) [WALKS, WALKED; WALKED]
+WALK (v) [WALKS, WALKED, WALKED]
 WARM (adj)
 WAS (v)
 WE (pron)
