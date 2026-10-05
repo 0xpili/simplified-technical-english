@@ -1,0 +1,39 @@
+name: Word change
+description: Ask for a change to the approved word list or to the substitutions
+title: "[Word] "
+labels: ["word-list"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Give the word and the official source issue.
+        Do not add a definition or an example.
+  - type: input
+    id: word
+    attributes:
+      label: Word
+    validations:
+      required: true
+  - type: dropdown
+    id: action
+    attributes:
+      label: Action
+      options:
+        - Add an approved word
+        - Remove an approved word
+        - Add a replacement in substitutions.md
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source issue
+      description: The ASD-STE100 issue that gives this word.
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason
+    validations:
+      required: false
