@@ -29,25 +29,44 @@ Text after the change:
 | `references/substitutions.md` | Replacements for frequent unapproved words |
 | `examples/before-after.md` | Examples of text before and after the change |
 | `scripts/ste_check.py` | A check tool for the STE rules |
+| `docs/installation.md` | How to install the skill in different tools |
 | `NOTICE.md` | Copyright information |
 
-## How to install the skill for Claude
+## How to install the skill
 
-1. Clone this repository into your skills folder:
+This skill obeys the Agent Skills standard.
+Many tools find a skill in a folder that contains a `SKILL.md` file.
 
-       git clone https://github.com/0xpili/simplified-technical-english.git ~/.claude/skills/simplified-technical-english
+### Claude Code
 
-2. Tell Claude to write or examine technical text in STE.
-3. Claude finds the skill and obeys the rules.
+Clone this repository into your skills folder:
 
+    git clone https://github.com/0xpili/simplified-technical-english.git ~/.claude/skills/simplified-technical-english
+
+Tell Claude to write or examine technical text in STE.
+Claude finds the skill and obeys the rules.
 You can also start the skill directly. Type `/simplified-technical-english`.
 
-## How to use the skill with a different LLM
+### OpenCode
 
-1. Open `SKILL.md`. Copy its text into the system prompt of the LLM.
-2. If the LLM accepts more text, add the text of `references/substitutions.md`.
-3. For the best results, also add the text of `references/word-list.md`.
-4. Tell the LLM to write technical text.
+OpenCode finds a skill in `~/.config/opencode/skills` and in `.opencode/skills`.
+OpenCode also finds a skill in `~/.claude/skills`, `.claude/skills`, and `.agents/skills`.
+
+To install the skill for OpenCode only:
+
+    git clone https://github.com/0xpili/simplified-technical-english.git ~/.config/opencode/skills/simplified-technical-english
+
+Then start the skill with `@simplified-technical-english`.
+
+### Other tools
+
+Cursor, GitHub Copilot, OpenAI Codex, and Gemini CLI also use the Agent Skills standard.
+Refer to `docs/installation.md` for the folder for each tool, and for the other install methods.
+
+### Tools without skills
+
+If your tool does not have skills, copy the text of `SKILL.md` into the system prompt.
+If the tool accepts more text, add `references/substitutions.md` and `references/word-list.md`.
 
 ## How to do a check of a text
 
