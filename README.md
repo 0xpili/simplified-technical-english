@@ -74,6 +74,13 @@ A person who knows STE must also examine an important text.
 This skill is not an official ASD document.
 This skill cannot make sure that your text obeys the official specification fully.
 
+## How to contribute
+
+Refer to `CONTRIBUTING.md` for the steps to contribute.
+The version policy is in `docs/versioning.md`.
+The source and the legal status of the word list are in `docs/word-list-provenance.md`.
+A short checklist of the rules is in `docs/quick-reference.md`.
+
 ## Source and copyright
 
 The source of this skill is ASD-STE100 Issue 7 (2017).

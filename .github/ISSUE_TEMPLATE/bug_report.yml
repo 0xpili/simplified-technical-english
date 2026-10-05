@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a problem with the STE check tool
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your report.
+        Give the input text and the command that you used.
+  - type: textarea
+    id: input
+    attributes:
+      label: Input text
+      description: The text that you checked.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: python3 scripts/ste_check.py --mode procedural draft.txt
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12"
+    validations:
+      required: false
